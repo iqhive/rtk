@@ -34,7 +34,7 @@ Agent runs "cargo test"
 | GitHub Copilot CLI | Shell hook (`PreToolUse`) | Yes |
 | Cursor | Shell hook (`preToolUse`) | Yes |
 | Gemini CLI | Rust binary (`BeforeTool`) | Yes |
-| OpenCode | TypeScript plugin (`tool.execute.before`) | Yes |
+| OpenCode | TypeScript plugin, OpenCode v2 API (`ctx.tool.hook("execute.before")`) | Yes |
 | OpenClaw | TypeScript plugin (`before_tool_call`) | Yes |
 | Pi | TypeScript extension (`tool_call` event) | Yes |
 | Oh My Pi (OMP) | TypeScript extension (`tool_call` event, shared with Pi) | Yes |
@@ -130,7 +130,7 @@ rtk init --global --gemini
 rtk init --global --opencode
 ```
 
-Creates `~/.config/opencode/plugins/rtk.ts`. Uses the `tool.execute.before` hook.
+Creates `~/.config/opencode/plugins/rtk.ts` (OpenCode v2 plugin API). Uses the `ctx.tool.hook("execute.before")` hook. Alternatively, add `github:iqhive/rtk#opencode-v2.0.0::path:hooks/opencode` to `plugins` in `opencode.jsonc`.
 
 ### Pi
 
