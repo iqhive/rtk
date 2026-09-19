@@ -14,13 +14,15 @@
 
 ### As a Git plugin (recommended for v2)
 
+The repo root `package.json` (on the `v2` branch) exports this file, so the repo itself is installable as an npm Git package.
+
 Add to `opencode.jsonc`:
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
-    "github:iqhive/rtk#opencode-v2.0.0::path:hooks/opencode"
+    "github:iqhive/rtk#opencode-v2.0.0"
   ]
 }
 ```
@@ -28,7 +30,7 @@ Add to `opencode.jsonc`:
 or:
 
 ```bash
-opencode plugin add 'github:iqhive/rtk#opencode-v2.0.0::path:hooks/opencode'
+opencode plugin add 'github:iqhive/rtk#opencode-v2.0.0'
 ```
 
 Use `#v2` instead of the tag to track the `v2` branch.

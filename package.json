@@ -4,11 +4,16 @@
   "description": "OpenCode v2 plugin that rewrites bash commands through `rtk rewrite` for token savings",
   "type": "module",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iqhive/rtk.git"
+  },
   "exports": {
-    ".": "./rtk.ts"
+    ".": "./hooks/opencode/rtk.ts"
   },
   "files": [
-    "rtk.ts"
+    "hooks/opencode/rtk.ts",
+    "hooks/opencode/README.md"
   ],
   "dependencies": {
     "@opencode/plugin": "^2.0.0"
