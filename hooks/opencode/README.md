@@ -44,3 +44,7 @@ Use `#v2` instead of the tag to track the `v2` branch.
 ## Exclusions
 
 Only the `bash` tool is rewritten. Tools named `fdx-*` and FlowDeck-native tools (`read`, `read_file`, `view`, `glob`, `grep`, `search`, `planning-state`, `codebase-state`, `repo-memory`, `load-rules`, `list-rules`, `task`, `capture-lesson`, `review-lessons`) are never touched, and bash commands whose first word is an `fdx-*` binary pass through unchanged.
+
+## Debugging
+
+Set `RTK_OPENCODE_DEBUG=1` before launching OpenCode to log every hook decision to stderr (`[rtk] tool=<name> agent=<id>: "<cmd>" -> "<rewritten>"`).

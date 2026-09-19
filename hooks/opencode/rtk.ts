@@ -15,6 +15,8 @@ import { spawn } from "node:child_process"
 //   3 + stdout  Rewrite (advisory) → mutate command
 
 const REWRITE_TIMEOUT_MS = 2_000
+// RTK_OPENCODE_DEBUG=1 logs every rewrite decision (agent, tool, before → after).
+const DEBUG = process.env.RTK_OPENCODE_DEBUG === "1"
 
 // Only shell-execution tools are rewritten. Every other tool (read, glob,
 // grep, FlowDeck's planning-state / codebase-state / repo-memory / task /
@@ -99,16 +101,29 @@ export default Plugin.define({
 
     await ctx.tool.hook("execute.before", async (event) => {
       const tool = event.tool.toLowerCase()
-      if (isIgnoredTool(tool) || !SHELL_TOOLS.has(tool)) return
+      if (isIgnoredTool(tool) || !SHELL_TOOLS.has(tool)) {
+        if (DEBUG) console.warn(`[rtk] skip tool=${event.tool} agent=${event.agent}`)
+        return
+      }
 
       const input = event.input
       if (!input || typeof input !== "object") return
 
       const command = (input as Record<string, unknown>).command
       if (typeof command !== "string" || !command) return
-      if (isIgnoredCommand(command)) return
+      if (isIgnoredCommand(command)) {
+        if (DEBUG) console.warn(`[rtk] skip fdx command agent=${event.agent}: ${command}`)
+        return
+      }
 
       const rewritten = await rewriteCommand(command, cwd)
+      if (DEBUG) {
+        console.warn(
+          `[rtk] tool=${event.tool} agent=${event.agent}: ${JSON.stringify(command)} -> ${
+            rewritten ? JSON.stringify(rewritten) : "(unchanged)"
+          }`,
+        )
+      }
       if (rewritten) {
         event.input = { ...(input as Record<string, unknown>), command: rewritten }
       }
