@@ -1,7 +1,7 @@
 import { Plugin } from "@opencode/plugin"
 import { spawn } from "node:child_process"
 
-// RTK OpenCode plugin (OpenCode v2 API) — rewrites bash commands to use rtk
+// RTK OpenCode plugin (OpenCode v2 API) — rewrites shell commands to use rtk
 // for token savings.
 // Requires: rtk >= 0.23.0 in PATH.
 //
@@ -9,48 +9,20 @@ import { spawn } from "node:child_process"
 // which is the single source of truth (src/discover/registry.rs).
 // To add or change rewrite rules, edit the Rust registry — not this file.
 //
+// The rewrite happens in OpenCode's `shell.create.before` hook, which fires
+// once per actual process spawn (the `shell` tool and `!cmd` terminal input),
+// after every `tool.execute.before` hook has run. Non-shell tools (read, grep,
+// fdx-*, ...) never reach this hook, and tool-level guards always inspect the
+// command as the model wrote it.
+//
 // Exit code contract for `rtk rewrite`:
 //   0 + stdout  Rewrite found → mutate command
 //   1           No RTK equivalent → pass through unchanged
 //   3 + stdout  Rewrite (advisory) → mutate command
 
 const REWRITE_TIMEOUT_MS = 2_000
-// RTK_OPENCODE_DEBUG=1 logs every rewrite decision (agent, tool, before → after).
+// RTK_OPENCODE_DEBUG=1 logs every rewrite decision (before → after).
 const DEBUG = process.env.RTK_OPENCODE_DEBUG === "1"
-
-// Only shell-execution tools are rewritten. Every other tool (read, glob,
-// grep, FlowDeck's planning-state / codebase-state / repo-memory / task /
-// load-rules / capture-lesson..., and anything named `fdx-*`) is left alone.
-const SHELL_TOOLS = new Set(["bash", "shell"])
-const IGNORED_TOOL_PREFIXES = ["fdx-"]
-const IGNORED_TOOLS = new Set([
-  "read",
-  "read_file",
-  "view",
-  "glob",
-  "grep",
-  "search",
-  "planning-state",
-  "codebase-state",
-  "repo-memory",
-  "load-rules",
-  "list-rules",
-  "task",
-  "capture-lesson",
-  "review-lessons",
-])
-
-function isIgnoredTool(tool: string): boolean {
-  if (IGNORED_TOOLS.has(tool)) return true
-  return IGNORED_TOOL_PREFIXES.some((prefix) => tool.startsWith(prefix))
-}
-
-// Commands invoking an `fdx-*` binary are FlowDeck-native; never rewrite them.
-function isIgnoredCommand(command: string): boolean {
-  const first = command.trimStart().split(/\s+/, 1)[0] ?? ""
-  const binary = first.split("/").pop() ?? first
-  return IGNORED_TOOL_PREFIXES.some((prefix) => binary.startsWith(prefix))
-}
 
 interface ExecResult {
   code: number | null
@@ -97,36 +69,17 @@ export default Plugin.define({
       return
     }
 
-    const cwd = ctx.location.directory
+    await ctx.shell.hook("create.before", async (invocation) => {
+      const command = invocation.command
+      if (!command) return
 
-    await ctx.tool.hook("execute.before", async (event) => {
-      const tool = event.tool.toLowerCase()
-      if (isIgnoredTool(tool) || !SHELL_TOOLS.has(tool)) {
-        if (DEBUG) console.warn(`[rtk] skip tool=${event.tool} agent=${event.agent}`)
-        return
-      }
-
-      const input = event.input
-      if (!input || typeof input !== "object") return
-
-      const command = (input as Record<string, unknown>).command
-      if (typeof command !== "string" || !command) return
-      if (isIgnoredCommand(command)) {
-        if (DEBUG) console.warn(`[rtk] skip fdx command agent=${event.agent}: ${command}`)
-        return
-      }
-
-      const rewritten = await rewriteCommand(command, cwd)
+      const rewritten = await rewriteCommand(command, invocation.cwd || ctx.location.directory)
       if (DEBUG) {
         console.warn(
-          `[rtk] tool=${event.tool} agent=${event.agent}: ${JSON.stringify(command)} -> ${
-            rewritten ? JSON.stringify(rewritten) : "(unchanged)"
-          }`,
+          `[rtk] ${JSON.stringify(command)} -> ${rewritten ? JSON.stringify(rewritten) : "(unchanged)"}`,
         )
       }
-      if (rewritten) {
-        event.input = { ...(input as Record<string, unknown>), command: rewritten }
-      }
+      if (rewritten) invocation.command = rewritten
     })
   },
 })

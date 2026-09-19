@@ -5,9 +5,9 @@
 ## Specifics
 
 - TypeScript plugin targeting the **OpenCode v2** plugin API (`@opencode/plugin`, `Plugin.define`)
-- Registers a `ctx.tool.hook("execute.before")` hook, calls `rtk rewrite` as a subprocess (`node:child_process`, 2s timeout)
+- Registers a `ctx.shell.hook("create.before")` hook, calls `rtk rewrite` as a subprocess (`node:child_process`, 2s timeout)
 - Honours the `rtk rewrite` exit-code contract: `0`/`3` + stdout → rewrite, anything else → pass through unchanged
-- Replaces `event.input.command` for the `bash` tool when the rewrite differs from the original
+- Replaces `invocation.command` right before OpenCode spawns the shell process when the rewrite differs from the original
 - Disables itself at `setup` if `rtk` is not on `PATH`
 
 ## Install
@@ -22,7 +22,7 @@ Add to `opencode.jsonc`:
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
-    "github:iqhive/rtk#opencode-v2.0.1"
+    "github:iqhive/rtk#opencode-v2.0.2"
   ]
 }
 ```
@@ -30,7 +30,7 @@ Add to `opencode.jsonc`:
 or:
 
 ```bash
-opencode plugin add 'github:iqhive/rtk#opencode-v2.0.1'
+opencode plugin add 'github:iqhive/rtk#opencode-v2.0.2'
 ```
 
 Use `#v2` instead of the tag to track the `v2` branch.
@@ -41,10 +41,12 @@ Use `#v2` instead of the tag to track the `v2` branch.
 
 > The v1 plugin API (`@opencode-ai/plugin`, `tool.execute.before` hook object) is not supported by this file; OpenCode v1 users should stay on the `develop` branch.
 
-## Exclusions
+## Scope
 
-Only the `bash` tool is rewritten. Tools named `fdx-*` and FlowDeck-native tools (`read`, `read_file`, `view`, `glob`, `grep`, `search`, `planning-state`, `codebase-state`, `repo-memory`, `load-rules`, `list-rules`, `task`, `capture-lesson`, `review-lessons`) are never touched, and bash commands whose first word is an `fdx-*` binary pass through unchanged.
+The hook fires only when OpenCode actually spawns a shell: the `shell` tool and `!cmd` terminal input. Non-shell tools (`read`, `grep`, `fdx-*`, FlowDeck's `planning-state`/`repo-memory`/..., `subagent`) never reach it, and tool-level guards from other plugins always see the command as the model wrote it, regardless of plugin order. Commands `rtk rewrite` doesn't know (e.g. `fdx-read x`) pass through unchanged.
+
+Note that OpenCode's own `permission.shell` rules are evaluated after this hook, so they match against the rewritten command (`rtk git status`, not `git status`); pattern rules need an `rtk *` counterpart.
 
 ## Debugging
 
-Set `RTK_OPENCODE_DEBUG=1` before launching OpenCode to log every hook decision to stderr (`[rtk] tool=<name> agent=<id>: "<cmd>" -> "<rewritten>"`).
+Set `RTK_OPENCODE_DEBUG=1` before launching OpenCode to log every rewrite decision to stderr (`[rtk] "<cmd>" -> "<rewritten>"`).

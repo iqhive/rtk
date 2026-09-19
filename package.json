@@ -1,7 +1,7 @@
 {
   "name": "opencode-rtk",
-  "version": "2.0.1",
-  "description": "OpenCode v2 plugin that rewrites bash commands through `rtk rewrite` for token savings",
+  "version": "2.0.2",
+  "description": "OpenCode v2 plugin that rewrites shell commands through `rtk rewrite` for token savings",
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
