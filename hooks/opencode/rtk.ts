@@ -16,6 +16,40 @@ import { spawn } from "node:child_process"
 
 const REWRITE_TIMEOUT_MS = 2_000
 
+// Only shell-execution tools are rewritten. Every other tool (read, glob,
+// grep, FlowDeck's planning-state / codebase-state / repo-memory / task /
+// load-rules / capture-lesson..., and anything named `fdx-*`) is left alone.
+const SHELL_TOOLS = new Set(["bash", "shell"])
+const IGNORED_TOOL_PREFIXES = ["fdx-"]
+const IGNORED_TOOLS = new Set([
+  "read",
+  "read_file",
+  "view",
+  "glob",
+  "grep",
+  "search",
+  "planning-state",
+  "codebase-state",
+  "repo-memory",
+  "load-rules",
+  "list-rules",
+  "task",
+  "capture-lesson",
+  "review-lessons",
+])
+
+function isIgnoredTool(tool: string): boolean {
+  if (IGNORED_TOOLS.has(tool)) return true
+  return IGNORED_TOOL_PREFIXES.some((prefix) => tool.startsWith(prefix))
+}
+
+// Commands invoking an `fdx-*` binary are FlowDeck-native; never rewrite them.
+function isIgnoredCommand(command: string): boolean {
+  const first = command.trimStart().split(/\s+/, 1)[0] ?? ""
+  const binary = first.split("/").pop() ?? first
+  return IGNORED_TOOL_PREFIXES.some((prefix) => binary.startsWith(prefix))
+}
+
 interface ExecResult {
   code: number | null
   stdout: string
@@ -65,13 +99,14 @@ export default Plugin.define({
 
     await ctx.tool.hook("execute.before", async (event) => {
       const tool = event.tool.toLowerCase()
-      if (tool !== "bash" && tool !== "shell") return
+      if (isIgnoredTool(tool) || !SHELL_TOOLS.has(tool)) return
 
       const input = event.input
       if (!input || typeof input !== "object") return
 
       const command = (input as Record<string, unknown>).command
       if (typeof command !== "string" || !command) return
+      if (isIgnoredCommand(command)) return
 
       const rewritten = await rewriteCommand(command, cwd)
       if (rewritten) {

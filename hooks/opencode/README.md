@@ -22,7 +22,7 @@ Add to `opencode.jsonc`:
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
-    "github:iqhive/rtk#opencode-v2.0.0"
+    "github:iqhive/rtk#opencode-v2.0.1"
   ]
 }
 ```
@@ -30,7 +30,7 @@ Add to `opencode.jsonc`:
 or:
 
 ```bash
-opencode plugin add 'github:iqhive/rtk#opencode-v2.0.0'
+opencode plugin add 'github:iqhive/rtk#opencode-v2.0.1'
 ```
 
 Use `#v2` instead of the tag to track the `v2` branch.
@@ -40,3 +40,7 @@ Use `#v2` instead of the tag to track the `v2` branch.
 `rtk init -g --opencode` copies `rtk.ts` to `~/.config/opencode/plugins/rtk.ts`, which OpenCode v2 discovers as a local plugin.
 
 > The v1 plugin API (`@opencode-ai/plugin`, `tool.execute.before` hook object) is not supported by this file; OpenCode v1 users should stay on the `develop` branch.
+
+## Exclusions
+
+Only the `bash` tool is rewritten. Tools named `fdx-*` and FlowDeck-native tools (`read`, `read_file`, `view`, `glob`, `grep`, `search`, `planning-state`, `codebase-state`, `repo-memory`, `load-rules`, `list-rules`, `task`, `capture-lesson`, `review-lessons`) are never touched, and bash commands whose first word is an `fdx-*` binary pass through unchanged.
